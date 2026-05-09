@@ -354,7 +354,7 @@ footer { background:var(--hero-bg); padding:52px 60px 40px; display:flex; flex-d
         </div>
         <div class="form-nav">
           <button class="btn-form-prev" onclick="prevStep(3)">← Retour</button>
-          <button class="btn-form-next" onclick="submitForm()">Prendre mon RDV →</button>
+          <button class="btn-form-next" onclick="submitForm(this)">Prendre mon RDV →</button>
         </div>
       </div>
 
@@ -646,7 +646,37 @@ function selectRadio(el, groupId) {
   document.querySelectorAll('#'+groupId+' .radio-label').forEach(l => l.classList.remove('selected'));
   el.classList.add('selected');
 }
-function submitForm() {
+async function submitForm(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
+
+  const bilanEl    = document.querySelector('#rg-bilan input[type=radio]:checked');
+  const contraEl   = document.querySelector('#rg-contra input[type=radio]:checked');
+  const parcoursEl = document.querySelector('#rg-parcours input[type=radio]:checked');
+  const timingEl   = document.querySelector('#rg-timing input[type=radio]:checked');
+  const cp         = document.getElementById('f-cp').value.trim();
+  const ddn        = document.getElementById('f-ddn').value;
+
+  const payload = {
+    firstName:   document.getElementById('f-prenom').value.trim(),
+    lastName:    document.getElementById('f-nom').value.trim(),
+    email:       document.getElementById('f-email').value.trim(),
+    phoneNumber: document.getElementById('f-tel').value.trim(),
+    ...(ddn && { dateOfBirth: ddn }),
+    ...(cp  && { postalCode:  cp }),
+    ...(bilanEl    && { hormoneAssessmentLast12m:   bilanEl.value }),
+    ...(contraEl   && { usingHormonalContraception: contraEl.value }),
+    ...(parcoursEl && { eggFreezingStage:           parcoursEl.value }),
+    ...(timingEl   && { timingConstraints:          timingEl.value }),
+  };
+
+  try {
+    await fetch('https://wpyb24cmwp.eu-west-3.awsapprunner.com/public/leads/carrot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (_) { /* network error — user still proceeds */ }
+
   showStep('success');
   setTimeout(() => { window.open('https://calendly.com/_woma/woma-entretien-personnalise', '_blank'); }, 800);
 }
